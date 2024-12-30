@@ -20,7 +20,7 @@ Step 02. Install the Packages
 
 ```bash
 pip install uv
-pip uv venv
+uv venv
 uv pip install -r requirements.txt
 ```
 
