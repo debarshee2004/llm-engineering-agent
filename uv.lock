@@ -357,23 +357,6 @@ wheels = [
 ]
 
 [[package]]
-name = "groq"
-version = "0.13.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/90/75/3b3e6b9495ca8e2e7f08373412f2f3c5fd0d8cbe987905d7caebc84abba2/groq-0.13.1.tar.gz", hash = "sha256:588fd5bee984f4eb46ec89552778d5698b9e9614435defef868645c19463cbcc", size = 109709 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/ad/2bf9b91085b1d67e432bc3071378570e7fd0326c5c648376e6230d3fed99/groq-0.13.1-py3-none-any.whl", hash = "sha256:0c5d1d6df93de55de705fe73729b79baaa0c871f7575d6aa64b2962b56101b3e", size = 109114 },
-]
-
-[[package]]
 name = "grpcio"
 version = "1.68.1"
 source = { registry = "https://pypi.org/simple" }
@@ -608,19 +591,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-groq"
-version = "0.2.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "groq" },
-    { name = "langchain-core" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/41/1f/e806d8fe2ca7c7d3c64ce7450accf90cfac730f20a8630550d17cc365516/langchain_groq-0.2.2.tar.gz", hash = "sha256:eefc938255aff869789d90785279b5b990ef08e1bc81150133d9a788285111c6", size = 14810 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/48/9ee597ab5b21dc7a166328a518ead1d28e02f70989a26f3b774276324552/langchain_groq-0.2.2-py3-none-any.whl", hash = "sha256:227c9db26861894d2e310cb20190f35f3713765558976e929a48714a32431eef", size = 14338 },
-]
-
-[[package]]
 name = "langchain-openai"
 version = "0.2.14"
 source = { registry = "https://pypi.org/simple" }
@@ -644,6 +614,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/10/a5/215816cc376c4f3853c961ae98022a6d57e74f6859c206f29716173e9a73/langchain_text_splitters-0.3.4.tar.gz", hash = "sha256:f3cedea469684483b4492d9f11dc2fa66388dab01c5d5c5307925515ab884c24", size = 22205 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/37/b2c971dfea62675f640e0dd5a078ca502885059276d21b7143cf1fe13e82/langchain_text_splitters-0.3.4-py3-none-any.whl", hash = "sha256:432fdb39c161d4d0db16d61d38af068dc5dd4dd08082febd2fced81304b2725c", size = 27783 },
+]
+
+[[package]]
+name = "langchain-xai"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "langchain-core" },
+    { name = "langchain-openai" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/1f/ef2eca82bbabfe859ec986130a1cda92bcc116253b08d82a76c7242bcb2b/langchain_xai-0.1.1.tar.gz", hash = "sha256:6ffe56a0fcf9ca217b84678da4377289ee45c4633b8543c620b982df7b4ef4ef", size = 5605 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/47/27749506840d76c18ac384cefae1f629343d14f4e91bc35e4992f3fe935f/langchain_xai-0.1.1-py3-none-any.whl", hash = "sha256:544a7a14c5e3be019159c8f251c7cf63cfdd3f6348e0fda1024ad872d6a08cd1", size = 6020 },
 ]
 
 [[package]]
@@ -672,8 +657,8 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-google-genai" },
-    { name = "langchain-groq" },
     { name = "langchain-openai" },
+    { name = "langchain-xai" },
     { name = "pydantic" },
     { name = "pydantic-core" },
     { name = "pydantic-settings" },
@@ -689,8 +674,8 @@ requires-dist = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-google-genai" },
-    { name = "langchain-groq" },
     { name = "langchain-openai" },
+    { name = "langchain-xai" },
     { name = "pydantic" },
     { name = "pydantic-core" },
     { name = "pydantic-settings" },

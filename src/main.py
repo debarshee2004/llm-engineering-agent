@@ -6,10 +6,10 @@ from textwrap import dedent
 from typing import List, Dict, Any, Optional
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
-# from langchain_google_genai import ChatGoogleGenerativeAI
-# from langchain_groq import ChatGroq
-# from langchain_anthropic import ChatAnthropic
-# from langchain_community.chat_models import ChatOllama
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_xai import ChatXAI
+from langchain_anthropic import ChatAnthropic
+from langchain_ollama.llms import OllamaLLM
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from rich.console import Console
@@ -25,13 +25,131 @@ console = Console()
 # --------------------------------------------------------------------------------
 load_dotenv()  # Load environment variables from .env file
 
-chat_model = ChatOpenAI(
-    model=os.getenv("LLM_MODEL"),
-    openai_api_key=os.getenv("API_KEY"),
-    openai_api_base=os.getenv("API_BASE"),
-    max_tokens=8000,
-    streaming=True
-)
+class ModelSelector:
+    """Handles model selection and configuration for different LLM providers"""
+
+    # Define available models and their configurations
+    AVAILABLE_MODELS = {
+        "1": {
+            "name": "OpenAI - GPT",
+            "class": ChatOpenAI,
+            "env_vars": ["OPENAI_API_KEY"],
+            "default_model": "gpt-3.5-turbo"
+        },
+        "2": {
+            "name": "Google - Gemini",
+            "class": ChatGoogleGenerativeAI,
+            "env_vars": ["GOOGLE_API_KEY"],
+            "default_model": "gemini-pro"
+        },
+        "3": {
+            "name": "xAI - Grok Beta",
+            "class": ChatXAI,
+            "env_vars": ["XAI_API_KEY"],
+            "default_model": "grok-beta"
+        },
+        "4": {
+            "name": "Anthropic - Claude",
+            "class": ChatAnthropic,
+            "env_vars": ["ANTHROPIC_API_KEY"],
+            "default_model": "claude-3-sonnet-20240229"
+        },
+        "5": {
+            "name": "Local - Ollama",
+            "class": OllamaLLM,
+            "env_vars": [],
+            "default_model": "llama2"
+        }
+    }
+
+    @classmethod
+    def display_available_models(cls) -> None:
+        """Display available models in a formatted table"""
+        table = Table(title="Available Language Models")
+        table.add_column("Choice", style="cyan")
+        table.add_column("Provider - Model", style="green")
+        table.add_column("Required API Key", style="yellow")
+
+        for key, model in cls.AVAILABLE_MODELS.items():
+            api_keys = ", ".join(model["env_vars"]) if model["env_vars"] else "None"
+            table.add_row(key, model["name"], api_keys)
+
+        console.print(table)
+
+    @classmethod
+    def get_model_choice(cls) -> str:
+        """Get user's model choice with input validation"""
+        while True:
+            cls.display_available_models()
+            choice = console.input("\n[bold cyan]Enter your choice (1-5):[/bold cyan] ").strip()
+
+            if choice in cls.AVAILABLE_MODELS:
+                return choice
+
+            console.print("[red]Invalid choice. Please try again.[/red]")
+
+    @classmethod
+    def create_chat_model(cls, choice: str = None):
+        """Create and return the appropriate chat model instance"""
+        if choice is None:
+            choice = cls.get_model_choice()
+
+        model_config = cls.AVAILABLE_MODELS[choice]
+        model_class = model_config["class"]
+
+        # Verify required environment variables
+        missing_vars = [var for var in model_config["env_vars"]
+                        if not os.getenv(var)]
+
+        if missing_vars:
+            raise ValueError(
+                f"Missing required environment variables for {model_config['name']}: "
+                f"{', '.join(missing_vars)}"
+            )
+
+        # Base configuration for all models
+        config = {
+            "model": model_config["default_model"],
+            "streaming": True
+        }
+
+        # Add model-specific configurations
+        if choice == "1":  # OpenAI
+            config.update({
+                "api_key": os.getenv("OPENAI_API_KEY"),
+                "max_tokens": 8000
+            })
+        elif choice == "2":  # Google
+            config.update({
+                "google_api_key": os.getenv("GOOGLE_API_KEY"),
+                "max_output_tokens": 8000
+            })
+        elif choice == "3":  # xAI
+            config.update({
+                "xai_api_key": os.getenv("XAI_API_KEY"),
+                "max_tokens": 8000
+            })
+        elif choice == "4":  # Anthropic
+            config.update({
+                "api_key": os.getenv("ANTHROPIC_API_KEY"),
+                "max_tokens": 8000
+            })
+        elif choice == "5":  # Ollama
+            config.update({
+                "model": "llama2"  # Can be changed to any locally available model
+            })
+
+        return model_class(**config)
+
+try:
+    # Get chat model instance
+    chat_model = ModelSelector.create_chat_model()
+    console.print(f"\n[green]Successfully initialized chat model![/green]")
+
+except ValueError as e:
+    console.print(f"\n[red]Error:[/red] {str(e)}")
+except Exception as e:
+    console.print(f"\n[red]Unexpected error:[/red] {str(e)}")
 
 # --------------------------------------------------------------------------------
 # 2. Define our schema using Pydantic for type safety
@@ -53,7 +171,7 @@ class AssistantResponse(BaseModel):
 # --------------------------------------------------------------------------------
 # 3. system prompt
 # --------------------------------------------------------------------------------
-system_PROMPT = dedent("""\
+system_prompt = dedent("""\
     You are a senior software engineer called Agent Engineer with decades of experience across all programming domains.
     Your expertise spans writing production standard code, system design, algorithms, testing, and best practices.
     You provide thoughtful, well-structured solutions while explaining your reasoning.
@@ -223,7 +341,7 @@ def normalize_path(path_str: str) -> str:
 # 5. Conversation state
 # --------------------------------------------------------------------------------
 conversation_history = [
-    SystemMessage(content=system_PROMPT)
+    SystemMessage(content=system_prompt)
 ]
 
 # --------------------------------------------------------------------------------
@@ -235,7 +353,7 @@ def guess_files_in_message(user_message: str) -> List[str]:
     Attempt to guess which files the user might be referencing.
     Returns normalized absolute paths.
     """
-    recognized_extensions = [".css", ".html", ".js", ".py", ".json", ".md"]
+    recognized_extensions = [".css", ".html", ".js", ".py", ".json", ".md", ".java", ".go", "c", "cpp"]
     potential_paths = []
     for word in user_message.split():
         if any(ext in word for ext in recognized_extensions) or "/" in word:
@@ -249,21 +367,18 @@ def guess_files_in_message(user_message: str) -> List[str]:
 
 def stream_langchain_response(user_message: str):
     """
-    Streams the DeepSeek chat completion response and handles structured output.
+    Streams the LLM chat completion response and handles structured output.
     Returns the final AssistantResponse.
     """
-    # Attempt to guess which file(s) user references
     potential_paths = guess_files_in_message(user_message)
-
     valid_files = {}
 
     # Try to read all potential files before the API call
     for path in potential_paths:
         try:
             content = read_local_file(path)
-            valid_files[path] = content  # path is already normalized
+            valid_files[path] = content
             file_marker = f"Content of file '{path}'"
-            # Add to conversation if we haven't already
             if not any(file_marker in msg.content for msg in conversation_history):
                 conversation_history.append(
                     SystemMessage(content=f"{file_marker}:\n\n{content}")
@@ -273,7 +388,6 @@ def stream_langchain_response(user_message: str):
             console.print(f"[red]✗[/red] {error_msg}", style="red")
             continue
 
-    # Now proceed with the API call
     conversation_history.append(HumanMessage(content=user_message))
 
     try:
@@ -288,22 +402,36 @@ def stream_langchain_response(user_message: str):
 
         console.print()
 
+        # Try to extract JSON from the response
         try:
-            parsed_response = json.loads(full_content)
+            # First, try to find JSON-like structure in the response
+            json_start = full_content.find('{')
+            json_end = full_content.rfind('}') + 1
 
-            # Ensure assistant_reply is present
-            if "assistant_reply" not in parsed_response:
-                parsed_response["assistant_reply"] = ""
+            if 0 <= json_start < json_end:
+                json_content = full_content[json_start:json_end]
+                parsed_response = json.loads(json_content)
+            else:
+                # If no JSON structure found, create a default response
+                parsed_response = {
+                    "assistant_reply": full_content,
+                    "files_to_create": [],
+                    "files_to_edit": []
+                }
 
-            # If assistant tries to edit files not in valid_files, remove them
-            if "files_to_edit" in parsed_response and parsed_response["files_to_edit"]:
+            # Ensure all required fields are present
+            parsed_response.setdefault("assistant_reply", "")
+            parsed_response.setdefault("files_to_create", [])
+            parsed_response.setdefault("files_to_edit", [])
+
+            # Handle file edits
+            if parsed_response["files_to_edit"]:
                 new_files_to_edit = []
                 for edit in parsed_response["files_to_edit"]:
                     try:
                         edit_abs_path = normalize_path(edit["path"])
-                        # If we have the file in context or can read it now
                         if edit_abs_path in valid_files or ensure_file_in_context(edit_abs_path):
-                            edit["path"] = edit_abs_path  # Use normalized path
+                            edit["path"] = edit_abs_path
                             new_files_to_edit.append(edit)
                     except (OSError, ValueError):
                         console.print(f"[yellow]⚠[/yellow] Skipping invalid path: '{edit['path']}'", style="yellow")
@@ -311,28 +439,28 @@ def stream_langchain_response(user_message: str):
                 parsed_response["files_to_edit"] = new_files_to_edit
 
             response_obj = AssistantResponse(**parsed_response)
-
-            # Save the assistant's textual reply to conversation
             conversation_history.append(
                 AIMessage(content=response_obj.assistant_reply)
             )
 
             return response_obj
 
-        except json.JSONDecodeError:
-            error_msg = "Failed to parse JSON response from assistant"
+        except json.JSONDecodeError as json_err:
+            error_msg = f"Failed to parse JSON response: {str(json_err)}\nRaw content: {full_content[:200]}..."
             console.print(f"[red]✗[/red] {error_msg}", style="red")
             return AssistantResponse(
-                assistant_reply=error_msg,
-                files_to_create=[]
+                assistant_reply=full_content,
+                files_to_create=[],
+                files_to_edit=[]
             )
 
     except Exception as err:
-        error_msg = f"DeepSeek API error: {str(err)}"
+        error_msg = f"LLM API error: {str(err)}"
         console.print(f"\n[red]✗[/red] {error_msg}", style="red")
         return AssistantResponse(
             assistant_reply=error_msg,
-            files_to_create=[]
+            files_to_create=[],
+            files_to_edit=[]
         )
 
 # --------------------------------------------------------------------------------
@@ -341,7 +469,7 @@ def stream_langchain_response(user_message: str):
 
 def main():
     console.print(Panel.fit(
-        "[bold blue]Welcome to Deep Seek Engineer with Structured Output[/bold blue] [green](and streaming)[/green]!🐋",
+        "[bold blue]Welcome to LLM Engineering Agent with Structured Output[/bold blue] [green](and streaming)[/green]!🤖",
         border_style="blue"
     ))
     console.print(

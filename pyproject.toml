@@ -14,7 +14,7 @@ dependencies = [
     "langchain-community",
     "langchain-core",
     "langchain-google-genai",
-    "langchain-groq",
+    "langchain-xai",
     "langchain-openai",
     "rich",
     "rich-cli"
